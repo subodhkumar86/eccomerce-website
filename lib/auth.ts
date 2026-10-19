@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { signingKey } from "@/lib/signing-key";
-import { isSameOrigin } from "@/lib/request-security";
+import { isTrustedOrigin } from "@/lib/request-security";
 const COOKIE = "veloura_admin_session";
 const secret = signingKey;
 export async function setAdminSession(admin: { id: string; email: string }) {
@@ -31,7 +31,7 @@ export async function getAdminSession() {
 }
 export async function requireAdmin() {
   const requestHeaders = await headers();
-  if (!isSameOrigin(requestHeaders.get("origin"), `${requestHeaders.get("x-forwarded-proto") || "http"}://${requestHeaders.get("host")}`, requestHeaders.get("sec-fetch-site"))) return { session: null, response: NextResponse.json({ error: "Cross-origin requests are not allowed." }, { status: 403 }) };
+  if (!isTrustedOrigin(requestHeaders.get("origin"), `${requestHeaders.get("x-forwarded-proto") || "http"}://${requestHeaders.get("host")}`, requestHeaders.get("sec-fetch-site"))) return { session: null, response: NextResponse.json({ error: "Cross-origin requests are not allowed." }, { status: 403 }) };
   const session = await getAdminSession();
   if (!session) return { session: null, response: NextResponse.json({ error: "Admin authentication required." }, { status: 401 }) };
   return { session, response: null };

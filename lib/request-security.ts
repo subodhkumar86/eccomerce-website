@@ -6,7 +6,16 @@ export function isSameOrigin(requestOrigin: string | null, target: string, fetch
   try { return new URL(requestOrigin).origin === new URL(target).origin; } catch { return false; }
 }
 export function rejectCrossOrigin(req: Request) {
-  return isSameOrigin(req.headers.get("origin"), req.url, req.headers.get("sec-fetch-site")) ? null : NextResponse.json({ error: "Cross-origin requests are not allowed." }, { status: 403 });
+  return isTrustedOrigin(req.headers.get("origin"), req.url, req.headers.get("sec-fetch-site")) ? null : NextResponse.json({ error: "Cross-origin requests are not allowed." }, { status: 403 });
+}
+
+// A reverse proxy may reconstruct the request using an internal host/protocol.
+// Only the explicitly configured public origin may supplement that request URL;
+// never trust an arbitrary forwarded host supplied by a caller.
+export function isTrustedOrigin(origin:string|null,target:string,fetchSite:string|null|undefined,canonical=process.env.SITE_URL){
+  if(isSameOrigin(origin,target,fetchSite))return true;
+  if(!canonical)return false;
+  try{const url=new URL(canonical);return url.protocol==="https:"&&!url.username&&!url.password&&isSameOrigin(origin,url.origin,fetchSite)}catch{return false}
 }
 
 // Bounded per-process throttling for the single-server SQLite deployment.

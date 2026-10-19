@@ -21,3 +21,6 @@ test-results
 
 .next-dev
 .next-production
+
+.netlify
+.vercel

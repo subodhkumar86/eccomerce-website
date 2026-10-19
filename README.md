@@ -35,6 +35,7 @@ Sample inventory is for local demonstration. Replace sample descriptions, images
 - Browser-local bag with validated storage, quantity limits, save-for-later and undo removal. Limits are 30 distinct objects and 99 pieces per object, subject to available stock.
 - Checkout checks current prices, delivery charges, visibility and stock before submission. If the total changes, the shopper reviews it before placing the order.
 - Checkout retry keys prevent the same submission from creating a second order. Stock changes and order creation share one transaction.
+- Successful checkout opens a fresh confirmation document and keeps a tab-local recovery link for up to seven days. Empty checkout can reopen the last confirmation.
 - A signed confirmation link displays the recorded order and current status for seven days. An arbitrary order-number URL does not confirm a purchase.
 - Newsletter signup requires consent, persists one subscription per email and offers admin export/removal.
 - Delivery/support and privacy-information pages, unavailable-page recovery, a custom 404 page, keyboard controls and reduced-motion support.
@@ -118,6 +119,8 @@ The migration command copies public categories, products and store settings from
 ## Configuration and deployment
 
 `DATABASE_URL` selects the SQLite database (`file:./dev.db`, relative to `prisma/`, by default). `AUTH_SECRET` must be a unique random value of at least 32 characters. `.env` and local database files are ignored by version control. Keep the database on persistent writable storage and maintain backups. Use MongoDB Atlas on Netlify and other platforms without persistent local disk. SQLite remains suitable for local development and deployments with persistent storage.
+
+On reverse-proxy hosting, set `SITE_URL` to the exact public HTTPS origin. Mutation checks accept that configured origin in addition to the request URL and continue to reject foreign browser origins.
 
 Admin sessions use signed, HTTP-only, same-site cookies and secure cookies in production. Password changes revoke older sessions. Admin/API mutations reject browser requests from another origin. Login and subscription throttles are bounded, per-process limits; multi-instance deployments need shared throttling. Use HTTPS and preserve the public host/protocol headers when placing the app behind a proxy.
 
