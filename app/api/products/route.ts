@@ -1,0 +1,2 @@
+import { NextResponse } from "next/server";import { prisma } from "@/lib/prisma";
+export async function GET(req:Request){try{const {searchParams}=new URL(req.url);const slug=searchParams.get("slug");const where={active:true,...(slug?{slug}:{})};const products=await prisma.product.findMany({where,include:{category:true},orderBy:{createdAt:"desc"}});return NextResponse.json({products});}catch{return NextResponse.json({error:"Unable to load products."},{status:500});}}

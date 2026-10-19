@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String   @default("Store Admin")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  description    String
+  price          Int
+  compareAtPrice Int?
+  image          String
+  categoryId     String?
+  category       Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  stock          Int      @default(0)
+  restockedAt    DateTime?
+  featured       Boolean  @default(false)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@index([active, featured])
+  @@index([categoryId])
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  orderNumber   String   @unique
+  checkoutKey   String?  @unique
+  checkoutFingerprint String?
+  customerName  String
+  email         String
+  phone         String
+  address       String
+  city          String
+  postalCode    String
+  notes         String?
+  items         String
+  subtotal      Int
+  shipping      Int
+  total         Int
+  paymentMethod String   @default("COD")
+  paymentStatus String   @default("PENDING")
+  status        String   @default("NEW")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@index([status, createdAt])
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model StoreSettings {
+  id             String   @id @default("main")
+  storeName      String   @default("VELŌURA")
+  tagline        String   @default("Objects of quiet distinction.")
+  announcement   String   @default("COMPLIMENTARY SHIPPING ON ORDERS OVER ₹5,000")
+  supportEmail   String   @default("care@veloura.example")
+  shippingFee    Int      @default(250)
+  freeShippingAt Int      @default(5000)
+  updatedAt      DateTime @updatedAt
+}

@@ -1,0 +1,39 @@
+name: Store checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check
+      - name: Build and smoke-test the container deployment
+        env:
+          SITE_URL: https://store.veloura.test
+          ADMIN_EMAIL: studio@veloura.test
+          SUPPORT_EMAIL: care@veloura.test
+          STORE_NAME: CI Store
+        run: |
+          export AUTH_SECRET="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+          export ADMIN_PASSWORD="CI-$(node -e 'process.stdout.write(require("node:crypto").randomBytes(16).toString("hex"))')"
+          trap 'docker compose --project-name veloura-ci down --volumes' EXIT
+          docker compose --project-name veloura-ci up --build --wait --wait-timeout 240
+          curl --fail http://127.0.0.1:3000/api/health
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-screenshots
+          path: tests/.artifacts/
+          if-no-files-found: ignore

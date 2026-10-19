@@ -1,0 +1,40 @@
+﻿services:
+  init:
+    build:
+      context: .
+      target: build
+    user: "1001:1001"
+    command: ["node", "scripts/production-init.cjs"]
+    environment:
+      NODE_ENV: production
+      HOME: /home/nextjs
+      DATABASE_URL: file:/app/data/veloura.db
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET}
+      SITE_URL: ${SITE_URL:?Set SITE_URL}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:?Set SUPPORT_EMAIL}
+      STORE_NAME: ${STORE_NAME:-Veloura}
+    volumes:
+      - store-data:/app/data
+    restart: "no"
+  web:
+    build:
+      context: .
+      target: runner
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: file:/app/data/veloura.db
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET}
+      SITE_URL: ${SITE_URL:?Set SITE_URL}
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    volumes:
+      - store-data:/app/data
+    restart: unless-stopped
+    init: true
+volumes:
+  store-data:

@@ -1,0 +1,5 @@
+import { StoreImage } from "@/components/store-image";
+import Link from "next/link";
+import { journal } from "@/lib/journal";
+export const metadata={title:"The journal | Veloura",description:"Ideas for considered spaces, thoughtful gifts and everyday rituals."};
+export default function Journal(){return <main className="page-container"><div className="eyebrow">Notes from the studio</div><h1 className="page-heading">A slower read.</h1><p className="page-intro">Ideas for the spaces we live in, the things we give and the objects we carry along the way.</p><div className="journal-grid">{journal.map((story,index)=><Link className="journal-card" href={`/journal/${story.slug}`} key={story.slug}><div className="journal-image"><StoreImage src={story.image} alt="" loading="lazy"/><span>0{index+1} / {story.category}</span></div><h2>{story.title}</h2><p>{story.intro}</p><span className="text-link">Read the story →</span></Link>)}</div><aside className="discovery-banner"><div><div className="eyebrow">From ideas to everyday objects</div><h2>Find your own point of view.</h2></div><Link className="button-dark" href="/collections">Explore collections</Link></aside></main>}

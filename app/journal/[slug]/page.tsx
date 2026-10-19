@@ -1,0 +1,7 @@
+import { StoreImage } from "@/components/store-image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { journal } from "@/lib/journal";
+export function generateStaticParams(){return journal.map(story=>({slug:story.slug}))}
+export async function generateMetadata({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const story=journal.find(item=>item.slug===slug);return {title:story?`${story.title} | Veloura journal`:"Story unavailable",description:story?.intro}}
+export default async function Story({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const story=journal.find(item=>item.slug===slug);if(!story)notFound();return <main className="page-container journal-story"><nav className="breadcrumb" aria-label="Breadcrumb"><Link href="/">Home</Link> / <Link href="/journal">Journal</Link> / {story.category}</nav><div className="eyebrow">The journal / {story.category}</div><h1 className="page-heading">{story.title}</h1><p className="page-intro">{story.intro}</p><StoreImage className="article-cover" src={story.image} alt=""/><article className="article-body">{story.sections.map(section=><section key={section.title}><h2>{section.title}</h2><p>{section.body}</p></section>)}<Link className="button-dark" href={story.link}>{story.linkText}</Link></article><section className="more-stories"><h2>Keep reading.</h2><div>{journal.filter(item=>item.slug!==slug).map(item=><Link key={item.slug} href={`/journal/${item.slug}`}>{item.title} <span aria-hidden="true">↗</span></Link>)}</div></section></main>}

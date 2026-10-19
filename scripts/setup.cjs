@@ -1,0 +1,6 @@
+const fs=require('node:fs');const {randomBytes}=require('node:crypto');const {spawnSync}=require('node:child_process');
+if(!fs.existsSync('.env')){let env=fs.readFileSync('.env.example','utf8');env=env.replace(/AUTH_SECRET="[^"]*"/,'AUTH_SECRET="'+randomBytes(32).toString('hex')+'"').replace(/ADMIN_PASSWORD="[^"]*"/,'ADMIN_PASSWORD="'+randomBytes(20).toString('base64url')+'"');fs.writeFileSync('.env',env,{flag:'wx'});console.log('Created .env with a unique session secret and administrator password. Your initial credentials are in .env.');}
+require('@next/env').loadEnvConfig(process.cwd());
+if(!process.env.AUTH_SECRET||process.env.AUTH_SECRET.length<32||process.env.AUTH_SECRET.includes('replace-with')){console.error('Set a unique AUTH_SECRET of at least 32 characters in .env before running setup. Existing configuration was not overwritten.');process.exit(1)}
+for(const args of [['scripts/generate.cjs'],[process.env.DATABASE_URL?.startsWith('mongodb')?'scripts/mongodb-init.cjs':'scripts/db-push.cjs'],['--import','tsx','prisma/seed.ts']]){const result=spawnSync(process.execPath,args,{stdio:'inherit',windowsHide:true});if(result.status!==0)process.exit(result.status??1)}
+console.log('Setup complete. Run npm run dev, then open http://localhost:3000. Admin sign-in: /admin/login.');

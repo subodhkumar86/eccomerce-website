@@ -1,0 +1,6 @@
+import { readCollectionQuery } from "@/lib/collection-query";
+import { getCatalogProducts } from "@/lib/catalog";
+import { prisma } from "@/lib/prisma";import ShopClient from "@/components/shop-client";import type { ProductView } from "@/components/product-card";
+export const dynamic = "force-dynamic";
+
+export default async function ProductsPage({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}){const params=await searchParams;const query=new URLSearchParams();for(const [key,value] of Object.entries(params))if(typeof value==="string")query.set(key,value);const products:ProductView[]=await getCatalogProducts();const categories=await prisma.category.findMany({orderBy:{name:"asc"}});return <main className="page-container"><div className="breadcrumb">Home / The collection</div><div style={{maxWidth:640,marginBottom:40}}><div className="eyebrow">The considered collection</div><h1 className="page-heading">Things worth keeping.</h1><p style={{fontSize:12,color:"var(--muted)",lineHeight:1.9,maxWidth:470}}>Find the objects that feel like you. Explore a considered edit of pieces for dressing, living and the little rituals in between.</p></div><ShopClient products={products} categories={categories} initialFilters={readCollectionQuery(query)}/></main>}

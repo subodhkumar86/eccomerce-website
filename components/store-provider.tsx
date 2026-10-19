@@ -1,0 +1,7 @@
+"use client";
+import { createContext, startTransition, useContext, useEffect, useMemo, useState } from "react";
+export type StoreSettingsView={storeName:string;tagline:string;announcement:string;supportEmail:string;shippingFee:number;freeShippingAt:number};
+const defaults:StoreSettingsView={storeName:"VELŌURA",tagline:"Objects of quiet distinction.",announcement:"COMPLIMENTARY SHIPPING ON ORDERS OVER ₹5,000",supportEmail:"care@veloura.example",shippingFee:250,freeShippingAt:5000};
+const StoreContext=createContext<StoreSettingsView>(defaults);
+export function StoreProvider({children,initialSettings}:{children:React.ReactNode;initialSettings?:StoreSettingsView}){const [settings,setSettings]=useState<StoreSettingsView>(()=>initialSettings??defaults);useEffect(()=>{let alive=true;const refresh=()=>fetch("/api/store",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(data=>{if(alive&&data?.settings)startTransition(()=>setSettings({...defaults,...data.settings}))}).catch(()=>{});if(!initialSettings)void refresh();window.addEventListener("focus",refresh);window.addEventListener("veloura-settings-changed",refresh);return()=>{alive=false;window.removeEventListener("focus",refresh);window.removeEventListener("veloura-settings-changed",refresh)}},[initialSettings]);const value=useMemo(()=>settings,[settings]);return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>}
+export function useStoreSettings(){return useContext(StoreContext)}
