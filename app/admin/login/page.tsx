@@ -8,16 +8,16 @@ export const metadata = { title: "Admin login | Veloura", robots: { index: false
 
 export default async function LoginPage() {
   let credentials: { email: string; password: string } | undefined;
-  if (process.env.NODE_ENV === "development") {
-    const host = (await headers()).get("host") ?? "";
-    if (/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(host)) {
+  const showcase = process.env.ADMIN_SHOWCASE_LOGIN === "true";
+  const host = (await headers()).get("host") ?? "";
+  const localDevelopment = process.env.NODE_ENV === "development" && /^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(host);
+  if (showcase || localDevelopment) {
       const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
       const password = process.env.ADMIN_PASSWORD;
       if (email && password) {
         const account = await prisma.admin.findUnique({ where: { email } }).catch(() => null);
         if (account && await bcrypt.compare(password, account.passwordHash)) credentials = { email, password };
       }
-    }
   }
-  return <AdminLogin credentials={credentials} />;
+  return <AdminLogin credentials={credentials} showcase={showcase} />;
 }

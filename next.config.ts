@@ -2,7 +2,7 @@
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 export default function nextConfig(phase:string):NextConfig{return {
  poweredByHeader:false,
- distDir:phase===PHASE_DEVELOPMENT_SERVER?".next-dev":".next-production",
+ distDir:phase===PHASE_DEVELOPMENT_SERVER?(process.env.VELOURA_BROWSER_DEBUG==="1"?".next-browser-debug":".next-dev"):".next-production",
  output:process.env.DOCKER_BUILD==="1"?"standalone":undefined,
  outputFileTracingIncludes:{"/*":["./node_modules/.prisma/mongo-client/**/*"]},
  async redirects(){return [{source:"/in/delhi",destination:"/",permanent:true}]},

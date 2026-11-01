@@ -51,6 +51,7 @@ model Order {
   orderNumber   String   @unique
   checkoutKey   String   @unique @default(cuid())
   checkoutFingerprint String?
+  customerId String?
   customerName  String
   email         String
   phone         String
@@ -76,6 +77,23 @@ model Subscriber {
   createdAt DateTime @default(now())
 }
 
+model PaymentIntent {
+  id String @id @map("_id")
+  providerOrderId String?
+  paymentId String?
+  method String?
+  upiReference String?
+  upiSubmittedAt DateTime?
+  payeeVpa String?
+  payeeName String?
+  leaseToken String?
+  leaseUntil DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([providerOrderId])
+  @@index([paymentId])
+}
+
 model StoreSettings {
   id             String   @id @default("main") @map("_id")
   storeName      String   @default("VELŌURA")
@@ -85,4 +103,18 @@ model StoreSettings {
   shippingFee    Int      @default(250)
   freeShippingAt Int      @default(5000)
   updatedAt      DateTime @updatedAt
+}
+
+model Customer {
+  id String @id @default(cuid()) @map("_id")
+  email String @unique
+  passwordHash String
+  name String
+  phone String @default("")
+  address String @default("")
+  city String @default("")
+  postalCode String @default("")
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

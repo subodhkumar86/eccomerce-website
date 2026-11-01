@@ -29,4 +29,5 @@ data/
 
 .next-dev/
 .next-production/
+.next-browser-debug/
 prisma/*.db*

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import "./globals.css";
 import "./responsive.css";
 import "./luxury.css";
+import "./refinements.css";
+import { ScrollReveals } from "@/components/scroll-reveals";
 import { MotionProvider } from "@/components/motion-provider";
 import { DiscoveryProvider } from "@/components/discovery-provider";
 import { WishlistProvider } from "@/components/wishlist-provider";
@@ -17,5 +19,5 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const settings=await prisma.storeSettings.findUnique({where:{id:"main"},select:{storeName:true,tagline:true,announcement:true,supportEmail:true,shippingFee:true,freeShippingAt:true}}).catch(()=>null);
-  return <html lang="en"><body><MotionProvider><StoreProvider initialSettings={settings??undefined}><CartProvider><WishlistProvider><DiscoveryProvider><a className="skip-link" href="#main-content">Skip to content</a><SiteHeader /><div id="main-content">{children}</div><SiteFooter /></DiscoveryProvider></WishlistProvider></CartProvider></StoreProvider></MotionProvider></body></html>;
+  return <html lang="en"><body><MotionProvider><ScrollReveals/><StoreProvider initialSettings={settings??undefined}><CartProvider><WishlistProvider><DiscoveryProvider><a className="skip-link" href="#main-content">Skip to content</a><SiteHeader /><div id="main-content">{children}</div><SiteFooter /></DiscoveryProvider></WishlistProvider></CartProvider></StoreProvider></MotionProvider></body></html>;
 }

@@ -7,6 +7,7 @@ export const customerSchema = z.object({
   phone: z.string().trim().min(7).max(30), address: z.string().trim().min(5).max(250), city: z.string().trim().min(2).max(100), postalCode: z.string().trim().min(4).max(15),
   notes: z.string().trim().max(500).optional().default(""), items: orderItemsSchema,
   idempotencyKey: z.string().uuid().optional(), expectedTotal: z.number().int().min(0).optional(),
+  paymentMethod: z.enum(["COD", "UPI", "RAZORPAY"]).optional().default("COD"),
 });
 export class CheckoutError extends Error {}
 export async function quoteOrder(requestedItems: z.infer<typeof orderItemsSchema>, db: Prisma.TransactionClient = prisma) {

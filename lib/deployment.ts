@@ -8,5 +8,7 @@ export function deploymentErrors(env: Record<string, string | undefined>) {
   if(mongo){try{const url=new URL(env.DATABASE_URL!);if(!url.hostname||url.pathname.length<2||url.username==="USERNAME"||url.password==="PASSWORD")throw new Error()}catch{errors.push("Set a valid MongoDB DATABASE_URL with a database name.")}}
   else if (!env.DATABASE_URL?.startsWith("file:") || env.DATABASE_URL.includes(":memory:") || env.DATABASE_URL.slice(5).trim().length===0) errors.push("Set a MongoDB URL or a persistent SQLite DATABASE_URL beginning with file:.");
   if(env.NETLIFY==="true"&&!mongo)errors.push("Netlify requires MongoDB; local SQLite files are not persistent in serverless functions.");
+  if(env.UPI_ENABLED==="true"&&!/^[A-Za-z0-9][A-Za-z0-9._-]{1,254}@[A-Za-z][A-Za-z0-9.-]{1,63}$/.test(env.UPI_ID??""))errors.push("UPI_ID must be a valid configured recipient before enabling direct UPI.");
+  if(env.RAZORPAY_ENABLED==="true"&&(!/^rzp_(test|live)_[A-Za-z0-9]+$/.test(env.RAZORPAY_KEY_ID??"")||(env.RAZORPAY_KEY_SECRET?.length??0)<16||(env.RAZORPAY_WEBHOOK_SECRET?.length??0)<16))errors.push("Razorpay requires a valid key ID, private API secret and independent webhook secret before enabling gateway payments.");
   return errors;
 }

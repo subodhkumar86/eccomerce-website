@@ -13,10 +13,10 @@ export function CustomerPage({kind}:{kind:"about"|"contact"|"care"|"faq"}){
  const titles={about:"Objects with a point of view.",contact:"A little help, from the studio.",care:"Keep the things you love.",faq:"Good questions. Clear answers."};
  const questions=[
   {q:"How do I place an order?",a:"Choose an available object, add it to your bag and continue to checkout. Enter your delivery details and review the final total before confirming."},
-  {q:"Which payment methods are available?",a:"Cash on delivery is available. This store does not collect card details or take online payments."},
+  {q:"Which payment methods are available?",a:"Cash on delivery is available. Configured UPI and Razorpay methods are shown at checkout. Direct UPI needs bank verification by the store; gateway payments are verified with the provider. Never share your PIN or OTP with the store."},
   {q:"How much is delivery?",a:settings.shippingFee===0?"Delivery is complimentary.":`Standard delivery is ${money(settings.shippingFee)}. Orders of ${money(settings.freeShippingAt)} or more qualify for complimentary delivery. Your final charge appears at checkout.`},
   {q:"Where can I see my order status?",a:"Keep the confirmation link shown after checkout. It displays your recorded order and current status for seven days. If the link expires, contact the studio with your order reference."},
-  {q:"Can I change or cancel my order?",a:"Contact the studio with your order reference as soon as possible. Changes depend on the current fulfilment stage; the studio will confirm what is possible."},
+  {q:"Can I change or cancel my order?",a:"Signed-in customers can cancel new, unpaid cash-on-delivery orders from their account before store confirmation. For online payments, confirmed orders, guest purchases or other changes, contact the studio with your order reference. Cancellation requests do not automatically refund money."},
   {q:"When will my order arrive?",a:"Contact the studio for the delivery estimate for your address and selected objects. An order confirmation is not a dispatch or delivery guarantee."},
   {q:"How do I request a return or report damage?",a:"Contact the studio with your order reference and a description of the issue. Keep the packaging and photographs of any damage. The studio will explain the next steps for your order."},
   {q:"Do my saved objects appear on another device?",a:"Your bag, favourites and recently viewed objects are saved in this browser. They do not sync across devices. Clearing browser storage removes them."},

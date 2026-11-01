@@ -5,15 +5,20 @@ const {PrismaClient}=require('@prisma/client');const bcrypt=require('bcryptjs');
  const folder=fs.mkdtempSync(path.join(os.tmpdir(),'veloura-admin-test-'));
  fs.closeSync(fs.openSync(path.join(folder,'test.db'),'wx'));
  const windowsEngines=process.platform==='win32'?{PRISMA_QUERY_ENGINE_LIBRARY:path.resolve('node_modules/@prisma/engines/query_engine-windows.dll.node'),PRISMA_SCHEMA_ENGINE_BINARY:path.resolve('node_modules/@prisma/engines/schema-engine-windows.exe')}:{};
- const env={...process.env,...windowsEngines,DATABASE_URL:'file:'+path.join(folder,'test.db').replaceAll('\\','/'),AUTH_SECRET:randomBytes(32).toString('hex'),NEXT_TELEMETRY_DISABLED:'1',SITE_URL:'https://store.veloura.test',RUST_LOG:'info'};
+ const env={...process.env,...windowsEngines,DATABASE_URL:'file:'+path.join(folder,'test.db').replaceAll('\\','/'),AUTH_SECRET:randomBytes(32).toString('hex'),NEXT_TELEMETRY_DISABLED:'1',ADMIN_SHOWCASE_LOGIN:process.env.ADMIN_SHOWCASE_LOGIN??'false',ADMIN_EMAIL:'studio@test.invalid',ADMIN_PASSWORD:'TestPassword!2026',SITE_URL:'https://store.veloura.test',RUST_LOG:'info'};
  const push=spawnSync(process.execPath,['node_modules/prisma/build/index.js','db','push','--skip-generate'],{env,encoding:'utf8',windowsHide:true});assert.equal(push.status,0,push.stdout+push.stderr);
- const prisma=new PrismaClient({datasourceUrl:env.DATABASE_URL});let server;
+ const prisma=new PrismaClient({datasourceUrl:env.DATABASE_URL});let server;let gatewayFixture;
  try{
   await prisma.admin.create({data:{email:'studio@test.invalid',name:'Test Studio',passwordHash:await bcrypt.hash('TestPassword!2026',4)}});
+  gatewayFixture=await require('./payment-fixture.cjs')();Object.assign(env,gatewayFixture.env);
   const port=await new Promise(resolve=>{const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const port=s.address().port;s.close(()=>resolve(port))})});
-  let log='';server=spawn(process.execPath,['node_modules/next/dist/bin/next','start','-p',String(port)],{env,windowsHide:true,stdio:['ignore','pipe','pipe']});server.stdout.on('data',d=>log+=d);server.stderr.on('data',d=>log+=d);
+  const browserDebug=process.env.AUTH_BROWSER_DEBUG==='1';if(browserDebug)env.VELOURA_BROWSER_DEBUG='1';
+  let log='';server=spawn(process.execPath,['node_modules/next/dist/bin/next',browserDebug?'dev':'start',...(browserDebug?['--webpack']:[]),'-p',String(port)],{env,windowsHide:true,stdio:['ignore','pipe','pipe']});server.stdout.on('data',d=>log+=d);server.stderr.on('data',d=>log+=d);
   const base=`http://localhost:${port}`;let ready=false;
   for(let i=0;i<60;i++){try{await fetch(base+'/api/admin/me');ready=true;break}catch{await new Promise(r=>setTimeout(r,500))}}assert.ok(ready,log);
+  const loginHtml=await (await fetch(base+'/admin/login')).text();assert.equal(loginHtml.includes('TestPassword!2026'),browserDebug||env.ADMIN_SHOWCASE_LOGIN==='true','production credentials must be visible only with the explicit showcase flag');
+  if(process.env.LAYOUT_BROWSER_TEST==='1'){await require('./layout-hydration.cjs')({base,prisma});return;}
+  if(process.env.AUTH_BROWSER_TEST==='1'){await require('./auth-browser.cjs')({base,prisma});return;}
   async function request(url,method='GET',body,cookie='',extraHeaders={}){const response=await fetch(base+url,{method,headers:{'Content-Type':'application/json',...(cookie?{cookie}:{}),...extraHeaders},...(body===undefined?{}:{body:JSON.stringify(body)})});const text=await response.text();let data;try{data=JSON.parse(text)}catch{data={text:text.slice(0,200)}}return {status:response.status,data,cookie:response.headers.getSetCookie().map(value=>value.split(';')[0]).join('; ')};}
   assert.equal((await request('/api/admin/products')).status,401);
   assert.equal((await request('/api/admin/account','PUT',{name:'Intruder'})).status,401);
@@ -32,6 +37,18 @@ const {PrismaClient}=require('@prisma/client');const bcrypt=require('bcryptjs');
   assert.ok((await prisma.product.findUnique({where:{id}})).restockedAt,'restocking must record its timestamp');
   await api('/api/admin/products','PATCH',{ids:[id],action:'hide'});assert.equal((await prisma.product.findUnique({where:{id}})).active,false);await api('/api/admin/products','PATCH',{ids:[id],action:'show'});
   assert.equal((await api('/api/admin/settings','PUT',{storeName:'Test store',tagline:'Test tagline',announcement:'Test announcement',supportEmail:'care@test.invalid',shippingFee:10,freeShippingAt:1000})).status,200);
+  assert.equal((await request('/api/search?q='+('x'.repeat(101)))).status,400);
+  assert.equal((await request('/api/search?q=x')).data.products.length,0);
+  const search=(await request('/api/search?q=UPDATED')).data;
+  assert.equal(search.products.length,1);assert.equal(search.products[0].id,id);assert.equal(search.products[0].price,200);assert.equal(search.products[0].description,undefined);
+  assert.equal((await request('/api/search?q=RENAMED')).data.products[0].id,id);
+  await api('/api/admin/products','PATCH',{ids:[id],action:'hide'});
+  assert.equal((await request('/api/search?q=Updated')).data.products.length,0);
+  await api('/api/admin/products','PATCH',{ids:[id],action:'show'});
+  const searchPrefix='SEARCH-'+randomUUID().slice(0,8);
+  await prisma.product.createMany({data:Array.from({length:9},(_,i)=>({name:searchPrefix+' '+i,slug:searchPrefix.toLowerCase()+'-'+i,description:'Search fixture',image:productBody.image,price:100,stock:0,active:true}))});
+  const bounded=(await request('/api/search?q='+searchPrefix)).data;assert.equal(bounded.products.length,8);assert.equal(bounded.hasMore,true);assert.ok(bounded.products.every(p=>p.stock===0));
+  await prisma.product.deleteMany({where:{slug:{startsWith:searchPrefix.toLowerCase()}}});
   const healthy=await request('/api/health');assert.equal(healthy.status,200);assert.equal(healthy.data.status,'ok');assert.equal((await fetch(base+'/')).headers.get('x-content-type-options'),'nosniff');
   assert.ok((await (await fetch(base+'/robots.txt')).text()).includes('/admin'));assert.ok((await (await fetch(base+'/sitemap.xml')).text()).includes('https://store.veloura.test/products/test-object'));
   const checkout={customerName:'Test Customer',email:'customer@test.invalid',phone:'1234567890',address:'123 Test Street',city:'Test City',postalCode:'123456',notes:'Please handle with care',items:[{productId:id,quantity:2}]};
@@ -58,9 +75,11 @@ const {PrismaClient}=require('@prisma/client');const bcrypt=require('bcryptjs');
   const changed=await api('/api/admin/account','PUT',{name:'New studio',currentPassword:'TestPassword!2026',newPassword:'NewPassword!2026'});assert.equal(changed.status,200,JSON.stringify(changed.data));cookie=changed.cookie;
   assert.equal((await request('/api/admin/me','GET',undefined,oldCookie)).status,401,'old session must be revoked after a password change');
   assert.equal((await api('/api/admin/account')).data.account.name,'New studio');assert.equal((await request('/api/admin/login','POST',{email:'studio@test.invalid',password:'TestPassword!2026'})).status,401);
-  if(process.env.BROWSER_TEST==='1')await require('./browser-flows.cjs')({base,prisma});
+  await require('./customer-integration.cjs')({request,prisma,adminCookie:cookie,productId:id});
+  await require('./payment-integration.cjs')({request,prisma,adminCookie:cookie,productId:id,fixture:gatewayFixture,base});
+  if(process.env.BROWSER_TEST==='1'){await require('./search-recovery.cjs')({base});await require('./payment-browser.cjs')({base,prisma,fixture:gatewayFixture});if(process.env.PAYMENT_BROWSER_ONLY!=='1')await require('./browser-flows.cjs')({base,prisma});}
   assert.equal((await api('/api/admin/categories','DELETE',{id:categoryId})).status,200);assert.equal((await prisma.product.findUnique({where:{id}})).categoryId,null);assert.equal((await api('/api/admin/products','DELETE',{id})).status,200);
   assert.equal((await api('/api/admin/logout','POST')).status,200);
   console.log('PASS: admin authentication, category/product CRUD, bulk inventory, settings, checkout totals, fulfilment, payment guards, idempotent cancellation/restock, password change and old-session revocation.');
- } finally {if(server){server.kill();await new Promise(resolve=>{if(server.exitCode!==null)resolve();else server.once('exit',resolve)})}await prisma.$disconnect();const cleanupTarget=path.resolve(folder),cleanupRoot=path.resolve(os.tmpdir());if(path.dirname(cleanupTarget)!==cleanupRoot||!path.basename(cleanupTarget).startsWith('veloura-admin-test-'))throw new Error('Unsafe test database cleanup path');fs.rmSync(cleanupTarget,{recursive:true,force:true,maxRetries:3,retryDelay:100});console.log('Isolated temporary test database removed.');}
+ } finally {if(server){if(process.env.AUTH_BROWSER_DEBUG==='1'&&process.platform==='win32'){spawnSync('taskkill',['/PID',String(server.pid),'/T','/F'],{stdio:'ignore',windowsHide:true})}else server.kill();await new Promise(resolve=>{if(server.exitCode!==null||server.signalCode!==null)resolve();else server.once('exit',resolve)})}if(gatewayFixture)await gatewayFixture.close();await prisma.$disconnect();const cleanupTarget=path.resolve(folder),cleanupRoot=path.resolve(os.tmpdir());if(path.dirname(cleanupTarget)!==cleanupRoot||!path.basename(cleanupTarget).startsWith('veloura-admin-test-'))throw new Error('Unsafe test database cleanup path');fs.rmSync(cleanupTarget,{recursive:true,force:true,maxRetries:3,retryDelay:100});console.log('Isolated temporary test database removed.');}
 })().catch(error=>{console.error(error);process.exitCode=1});

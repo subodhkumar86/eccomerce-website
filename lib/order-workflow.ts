@@ -1,5 +1,8 @@
 export const orderStatuses = ["NEW", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"] as const;
 export const paymentStatuses = ["PENDING", "PAID", "REFUNDED"] as const;
+export function customerCanCancel(order: { status: string; paymentMethod: string; paymentStatus: string }) {
+  return order.status === "NEW" && order.paymentMethod === "COD" && order.paymentStatus === "PENDING";
+}
 export function orderTransitionError(previous: string, next?: string): string | null {
   if (!next || next === previous) return null;
   const allowed: Record<string, string[]> = {
